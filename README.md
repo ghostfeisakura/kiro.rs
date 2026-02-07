@@ -187,6 +187,72 @@ curl http://127.0.0.1:8990/v1/messages \
   }'
 ```
 
+## Docker 部署
+
+### 1. 使用预构建镜像部署（推荐）
+
+项目提供预构建的 Docker 镜像，托管在 GitHub Container Registry，支持 `linux/amd64` 和 `linux/arm64` 双架构：
+
+```
+ghcr.io/hank9999/kiro-rs:latest
+```
+
+**使用 docker-compose 一键部署：**
+
+1. 准备好 `config.json` 和 `credentials.json` 配置文件（参考下方配置说明）
+2. 下载项目中的 `docker-compose.yml`，与配置文件放在同一目录
+3. 启动服务：
+
+```bash
+docker compose up -d
+```
+
+**自定义镜像来源和版本：**
+
+通过环境变量 `IMAGE_OWNER` 和 `IMAGE_TAG` 可自定义镜像来源和版本标签：
+
+```bash
+IMAGE_OWNER=your-username IMAGE_TAG=v2026.2.3 docker compose up -d
+```
+
+**国内用户加速：**
+
+`docker-compose.yml` 中包含注释的国内镜像地址（`ghcr.nju.edu.cn`），国内用户可取消注释该行并注释掉原始镜像行以加速拉取：
+
+```yaml
+services:
+  kiro-rs:
+    # 使用国内镜像
+    image: ghcr.nju.edu.cn/${IMAGE_OWNER:-hank9999}/kiro-rs:${IMAGE_TAG:-latest}
+    # image: ghcr.io/${IMAGE_OWNER:-hank9999}/kiro-rs:${IMAGE_TAG:-latest}
+```
+
+### 2. 手动 Docker 运行
+
+如果不使用 docker-compose，可以直接通过 `docker run` 启动：
+
+```bash
+docker run -d \
+  --name kiro-rs \
+  -p 127.0.0.1:8990:8990 \
+  -v $(pwd)/config.json:/app/config/config.json:ro \
+  -v $(pwd)/credentials.json:/app/config/credentials.json \
+  --restart unless-stopped \
+  ghcr.io/hank9999/kiro-rs:latest
+```
+
+> 其中 `config.json` 以只读方式挂载，`credentials.json` 需要可写（服务会自动刷新 Token 并回写）。
+
+### 3. 本地构建镜像（可选）
+
+如需自行构建镜像：
+
+```bash
+docker build -t kiro-rs .
+```
+
+Dockerfile 采用多阶段构建：前端构建（Node.js + pnpm）→ Rust 编译（Alpine musl）→ Alpine 运行时，最终镜像体积较小。
+
 ## 配置说明
 
 ### config.json
